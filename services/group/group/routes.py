@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from group import service
+from group import library_client, service
 
 group_blueprint = Blueprint("group", __name__)
 
@@ -15,6 +15,12 @@ def bad_request(error):
 def not_found(error):
     """turn a missing member, night or game into a 404 response"""
     return jsonify({"error": str(error)}), 404
+
+@group_blueprint.errorhandler(library_client.LibraryUnavailableError)
+def library_unavailable(error):
+    """turn a library outage into a 503 so callers get a clear message"""
+    print(f"Library call failed: {error}")
+    return jsonify({"error": "library is unavailable, try again later"}), 503
 
 
 @group_blueprint.get("/members")
