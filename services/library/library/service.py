@@ -55,6 +55,9 @@ def find_games_that_fit(players: int, minutes: int) -> list[dict]:
     _check_positive_whole_number(minutes, "minutes")
     return repository.find_games_that_fit(players, minutes)
 
+def get_game_title(game_id: int) -> str | None:
+    """return the title of a game, or None if the library doesn't have it"""
+    return repository.get_game_title(game_id)
 
 def _check_positive_whole_number(value, field_name: str) -> None:
     """raise ValueError unless value is a whole number of at least 1"""
