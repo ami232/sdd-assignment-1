@@ -34,3 +34,11 @@ def find_games_that_fit():
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
     return jsonify(fitting_games)
+
+@library_blueprint.get("/games/<int:game_id>")
+def get_game(game_id: int):
+    """return the id and title of one game, or 404 if the library doesn't have it"""
+    title = service.get_game_title(game_id)
+    if title is None:
+        return jsonify({"error": f"no game with id {game_id}"}), 404
+    return jsonify({"id": game_id, "title": title})

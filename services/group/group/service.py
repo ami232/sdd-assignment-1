@@ -2,7 +2,7 @@ import sqlite3
 from datetime import date
 
 from group import repository
-from library import repository as library_repository
+from group import library_client
 
 NEVER_PLAYED_RATING = 10
 UNRATED_RATING = 5
@@ -145,7 +145,7 @@ def build_night_plan(night_id: int) -> dict:
     """plan a night by filling its time with the highest-scoring games that fit the group"""
     night = get_night(night_id)
     player_count = len(night["attendees"]) + len(night["guests"])
-    candidate_games = library_repository.find_games_that_fit(
+    candidate_games = library_client.find_games_that_fit(
         player_count, night["available_minutes"]
     )
 
@@ -170,7 +170,7 @@ def rating_reminders() -> list[dict]:
     """return the games each active member played but has not rated yet"""
     reminders = repository.get_unrated_plays()
     for reminder in reminders:
-        reminder["title"] = library_repository.get_game_title(reminder["game_id"])
+        reminder["title"] = library_client.get_game_title(reminder["game_id"])
     return reminders
 
 
@@ -221,7 +221,7 @@ def _check_game_exists(game_id: int) -> None:
     """raise NotFoundError unless the library has a game with this id"""
     _check_positive_whole_number(game_id, "game_id")
     # ratings and plays have no foreign key to games (ADR-3), so library is asked instead
-    if library_repository.get_game_title(game_id) is None:
+    if library_client.get_game_title(game_id) is None:
         raise NotFoundError(f"no game with id {game_id} in the library")
 
 
