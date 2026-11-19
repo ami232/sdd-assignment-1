@@ -4,9 +4,8 @@ import app
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
-    """give each test a fresh library app with its own seeded database"""
-    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+def client():
+    """give each test a library app that starts from an empty, freshly seeded database"""
     return app.create_app().test_client()
 
 def test_home_page_reports_the_app_is_up(client):

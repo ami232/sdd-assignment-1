@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 
 import config
+import database
 from library import repository as library_repository
 from library.routes import library_blueprint
 
@@ -9,8 +10,9 @@ def create_app() -> Flask:
     """build the Flask app and register its routes and error handlers"""
     app = Flask(__name__)
 
-    # create what is missing on every boot, but never drop or re-seed existing data
-    library_repository.create_tables()
+    # wait for the database, bring its schema up to date, and seed it only if it is empty, before serving any request
+    database.wait_for_database()
+    database.run_migrations()
     library_repository.seed_games()
 
     app.register_blueprint(library_blueprint)
@@ -35,5 +37,5 @@ def create_app() -> Flask:
     
 if __name__ == "__main__":
     port = config.get_port()
-    print(f"Starting app on 0.0.0.0:{port}, data dir {config.get_data_dir()}")
+    print(f"Starting app on 0.0.0.0:{port}")
     create_app().run(host="0.0.0.0", port=port)
