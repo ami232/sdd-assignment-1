@@ -1,0 +1,42 @@
+# Whole system locally: docker compose up --build
+# The two domain services, one container each, and the UI in front.
+# Open http://localhost:8080. SQL Server and the database init job are added next.
+services:
+  trip-management:
+    build: ./services/trip-management
+    environment:
+      PORT: "8000"
+      ROOMS_URL: http://room-allocation:8000
+    ports:
+      - "8001:8000"
+    volumes:
+      - trips-data:/data
+
+  room-allocation:
+    build: ./services/room-allocation
+    environment:
+      PORT: "8000"
+      TRIPS_URL: http://trip-management:8000
+    ports:
+      - "8002:8000"
+    volumes:
+      - rooms-data:/data
+    depends_on:
+      - trip-management
+
+  ui:
+    build: ./services/UI
+    environment:
+      TRIPS_URL: http://trip-management:8000
+      ROOMS_URL: http://room-allocation:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - trip-management
+      - room-allocation
+
+# One volume per service: each owns its own SQLite file until the
+# database server is added.
+volumes:
+  trips-data:
+  rooms-data:

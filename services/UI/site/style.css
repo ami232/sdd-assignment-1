@@ -1,0 +1,613 @@
+/* Colours from the skier animation and the hand-drawn winter
+   illustrations the site is inspired by: warm paper, cobalt-blue ink,
+   tomato-red gondolas and pine green. */
+:root {
+    --ink: #1f2d3d;
+    --muted: #6b7684;
+    --sky: #f7f1e8;
+    --snow: #ffffff;
+    --line: #e6ded2;
+    --scarf: #d9472f;
+    --goggles: #2f5bbf;
+    --pine: #2f5d50;
+    --amber: #b7791f;
+    --shadow: 0 10px 30px rgba(31, 45, 61, 0.08);
+    --radius: 18px;
+}
+
+/* Anything with the hidden attribute stays hidden, even if a class
+   below gives it display: grid or flex. */
+[hidden] {
+    display: none !important;
+}
+
+* {
+    box-sizing: border-box;
+    /* Grid and flex children may shrink below their content's natural
+       width, so a wide video or table never pushes the page sideways. */
+    min-width: 0;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #eef3f6 0%, var(--sky) 420px);
+    color: var(--ink);
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+}
+
+h1, h2, h3 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0 0 8px;
+}
+
+h1 { font-size: clamp(30px, 5vw, 46px); }
+h2 { font-size: 24px; }
+h3 { font-size: 18px; }
+
+a {
+    color: inherit;
+}
+
+/* ---------- Header ---------- */
+
+.site-header {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 22px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 22px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.brand span {
+    color: var(--scarf);
+}
+
+.brand svg {
+    width: 85px;
+    height: 34px;
+}
+
+/* The cabin rides up the cable to the right and back down, slowly.
+   The cable rises 6 units over its length, so the cabin rises with it. */
+.cabin {
+    animation: ride 9s ease-in-out infinite alternate;
+}
+
+@keyframes ride {
+    from { transform: translate(0, 0); }
+    to   { transform: translate(66px, -4px); }
+}
+
+.site-header nav {
+    display: flex;
+    gap: 6px;
+}
+
+.site-header nav a {
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.site-header nav a:hover,
+.site-header nav a.active {
+    background: var(--snow);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+}
+
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 10px 20px 80px;
+}
+
+.footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 30px 20px 40px;
+}
+
+/* ---------- Home page ---------- */
+
+.hero {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 40px;
+    align-items: center;
+    margin: 20px 0 50px;
+}
+
+.hero p {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 440px;
+}
+
+.hero-video {
+    width: 100%;
+    border-radius: 28px;
+    box-shadow: 0 25px 60px rgba(31, 45, 61, 0.18);
+    display: block;
+}
+
+.choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.choice {
+    display: block;
+    text-decoration: none;
+    background: var(--snow);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+    border-top: 5px solid var(--goggles);
+    transition: transform 0.2s;
+}
+
+.choice.going {
+    border-top-color: var(--scarf);
+}
+
+.choice:hover {
+    transform: translateY(-4px);
+}
+
+.choice p {
+    color: var(--muted);
+    margin: 0 0 14px;
+}
+
+.choice .go {
+    font-weight: 700;
+}
+
+/* ---------- Shared building blocks ---------- */
+
+.page-heading {
+    margin: 20px 0 30px;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--goggles);
+    margin: 0 0 6px;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.section {
+    margin-bottom: 45px;
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.panel {
+    background: var(--snow);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+}
+
+.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.empty {
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 28px;
+    text-align: center;
+    color: var(--muted);
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: var(--muted);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* ---------- Forms ---------- */
+
+form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+form.stacked {
+    grid-template-columns: 1fr;
+}
+
+label {
+    display: grid;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+input, select {
+    font: inherit;
+    padding: 11px 13px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fdfbf8;
+    color: var(--ink);
+    width: 100%;
+}
+
+input:focus, select:focus {
+    outline: 2px solid var(--goggles);
+    border-color: transparent;
+}
+
+button {
+    font: inherit;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 18px;
+    background: var(--ink);
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: var(--goggles);
+}
+
+button.small {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 9px;
+}
+
+button.danger {
+    background: transparent;
+    color: var(--scarf);
+    border: 1px solid var(--scarf);
+}
+
+button.danger:hover {
+    background: var(--scarf);
+    color: white;
+}
+
+.message {
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.message.success { background: #e3f1ec; color: var(--pine); }
+.message.error   { background: #f8e4e1; color: var(--scarf); }
+
+/* ---------- Trips and rooms ---------- */
+
+.trip-card {
+    display: block;
+    text-decoration: none;
+    background: var(--snow);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s;
+}
+
+.trip-card:hover {
+    transform: translateY(-3px);
+}
+
+.trip-card .dates {
+    font-weight: 700;
+    margin: 10px 0 14px;
+}
+
+.bar {
+    height: 8px;
+    border-radius: 99px;
+    background: #efe8dd;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.bar div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--goggles), var(--pine));
+    border-radius: 99px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    margin-bottom: 40px;
+}
+
+.stat {
+    background: var(--snow);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+}
+
+.stat span {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.stat strong {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 30px;
+}
+
+.stat.highlight {
+    background: var(--ink);
+    color: white;
+}
+
+.stat.highlight span {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ---------- Registrations table ---------- */
+
+.table-wrap {
+    background: var(--snow);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+    margin-bottom: 18px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 13px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+
+th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+.actions div {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pill {
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.pill.confirmed       { background: #e3f1ec; color: var(--pine); }
+.pill.pending_payment { background: #fbf0dc; color: var(--amber); }
+.pill.waitlisted      { background: #e5ecfa; color: var(--goggles); }
+.pill.cancelled       { background: #f1eeea; color: var(--muted); }
+
+/* ---------- My trip ---------- */
+
+/* A smaller, quieter joke after a heading. */
+.aside {
+    font-size: 0.6em;
+    font-weight: 400;
+    color: var(--muted);
+}
+
+.countdown {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 18px 0 6px;
+}
+
+.countdown div {
+    background: var(--sky);
+    border-radius: 14px;
+    padding: 12px 16px;
+    min-width: 82px;
+    text-align: center;
+}
+
+.countdown strong {
+    display: block;
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 34px;
+}
+
+.countdown span {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.checklist {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 6px 18px;
+}
+
+.checklist label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 400;
+    padding: 6px 0;
+    cursor: pointer;
+}
+
+.checklist input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--pine);
+}
+
+.checklist input:checked + span {
+    text-decoration: line-through;
+    color: var(--muted);
+}
+
+/* The otter mascot sits beside the lookup form and the packing list.
+   If otter.png is missing the image removes itself (see onerror). */
+.lookup, .packing {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.lookup form, .packing > div {
+    flex: 1;
+}
+
+.otter {
+    width: 130px;
+    flex-shrink: 0;
+    mix-blend-mode: multiply;  /* lets its cream background melt into the page */
+}
+
+/* The over-packed skier stands in the bottom-right corner of the list. */
+.packing {
+    align-items: flex-end;
+}
+
+.packer {
+    width: 200px;
+    flex-shrink: 0;
+    /* Brighten the drawing's paper to white, then multiply so whatever
+       white is left disappears into the white panel. */
+    filter: brightness(1.06);
+    mix-blend-mode: multiply;
+}
+
+/* ---------- Snow ---------- */
+
+.snow {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 10;
+}
+
+.flake {
+    position: absolute;
+    top: -10px;
+    border-radius: 50%;
+    background: white;
+    /* A faint shadow keeps white flakes visible on the light background. */
+    box-shadow: 0 0 5px rgba(47, 91, 191, 0.45);
+    animation: fall linear infinite;
+}
+
+@keyframes fall {
+    to {
+        transform: translate(var(--drift), 105vh);
+    }
+}
+
+/* People who ask their system for less motion get no snow and a still gondola. */
+@media (prefers-reduced-motion: reduce) {
+    .snow { display: none; }
+    .cabin { animation: none; }
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 760px) {
+    .hero, .choices, .two-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .lookup, .packing {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .otter {
+        width: 110px;
+        margin: 0 auto;
+    }
+
+    .packer {
+        width: 160px;
+        align-self: flex-end;
+    }
+
+    .hero {
+        gap: 24px;
+    }
+}

@@ -1,0 +1,31 @@
+server {
+    listen ${PORT};
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Browsers must check with the server before reusing a saved copy, so a
+    # new deploy shows up on the next reload. Unchanged files still come
+    # back as a quick "304 Not Modified" thanks to their ETag.
+    add_header Cache-Control "no-cache";
+
+    # Same /health address as the two services, so the cloud can check
+    # that nginx is up. It answers on its own and does not wait on them.
+    location = /health {
+        default_type application/json;
+        return 200 '{"status": "ok"}';
+    }
+
+    # The browser only talks to this server. Requests under /trip-api/ and
+    # /room-api/ are passed on to the services with the prefix removed, so
+    # /trip-api/trips reaches Trip Management as /trips. One origin means
+    # the services need no CORS settings.
+    location /trip-api/ {
+        proxy_pass ${TRIPS_URL}/;
+        proxy_ssl_server_name on;
+    }
+
+    location /room-api/ {
+        proxy_pass ${ROOMS_URL}/;
+        proxy_ssl_server_name on;
+    }
+}
