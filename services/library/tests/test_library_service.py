@@ -51,6 +51,11 @@ def test_validate_game_rejects_a_blank_title():
         service.validate_game(make_game(title="   "))
 
 
+def test_validate_game_rejects_a_title_that_is_too_long():
+    with pytest.raises(ValueError, match="title"):
+        service.validate_game(make_game(title="A" * 101))
+
+
 def test_validate_game_rejects_an_owner_that_is_not_text():
     with pytest.raises(ValueError, match="owner"):
         service.validate_game(make_game(owner=42))
