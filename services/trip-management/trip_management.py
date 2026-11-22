@@ -138,10 +138,11 @@ def _promote_waitlist(conn, trip_id, now):
         conn.execute(
             """
             UPDATE registrations
-            SET status = 'pending_payment', payment_deadline = ?
+            SET status = 'pending_payment', payment_deadline = ?,
+                status_changed_at = ?
             WHERE id = ?
             """,
-            (deadline, row["id"])
+            (deadline, now.isoformat(), row["id"])
         )
 
 
@@ -155,12 +156,12 @@ def _release_expired(conn, trip_id, now):
     conn.execute(
         """
         UPDATE registrations
-        SET status = 'cancelled'
+        SET status = 'cancelled', status_changed_at = ?
         WHERE trip_id = ?
           AND status = 'pending_payment'
           AND payment_deadline < ?
         """,
-        (trip_id, now.isoformat())
+        (now.isoformat(), trip_id, now.isoformat())
     )
 
     _promote_waitlist(conn, trip_id, now)
@@ -217,9 +218,10 @@ def register_student(trip_id, name, email):
         registration_id = conn.execute(
             """
             INSERT INTO registrations
-            (trip_id, name, email, status, registered_at, payment_deadline)
+            (trip_id, name, email, status, registered_at, payment_deadline,
+             status_changed_at)
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 trip_id,
@@ -227,7 +229,8 @@ def register_student(trip_id, name, email):
                 email,
                 status,
                 now.isoformat(),
-                payment_deadline
+                payment_deadline,
+                now.isoformat()
             )
         ).fetchone()["id"]
 
@@ -263,7 +266,8 @@ def confirm_payment(registration_id):
         _lock_trip(conn, registration["trip_id"])
 
         # Expire first, so a late payment finds its place already released.
-        _release_expired(conn, registration["trip_id"], _now())
+        now = _now()
+        _release_expired(conn, registration["trip_id"], now)
 
         status = conn.execute(
             "SELECT status FROM registrations WHERE id = ?",
@@ -278,10 +282,10 @@ def confirm_payment(registration_id):
         conn.execute(
             """
             UPDATE registrations
-            SET status = 'confirmed'
+            SET status = 'confirmed', status_changed_at = ?
             WHERE id = ?
             """,
-            (registration_id,)
+            (now.isoformat(), registration_id)
         )
 
         conn.commit()
@@ -315,9 +319,10 @@ def cancel_registration(registration_id):
             raise ValueError("Registration is already cancelled")
 
         # Keep the registration row so its history stays visible.
+        now = _now()
         conn.execute(
-            "UPDATE registrations SET status = 'cancelled' WHERE id = ?",
-            (registration_id,)
+            "UPDATE registrations SET status = 'cancelled', status_changed_at = ? WHERE id = ?",
+            (now.isoformat(), registration_id)
         )
 
         # Tell the other domains (Room Allocation frees the bed).
@@ -326,7 +331,7 @@ def cancel_registration(registration_id):
 
         # Release expired reservations and offer available places
         # to students on the waiting list, in FIFO order.
-        _release_expired(conn, registration["trip_id"], _now())
+        _release_expired(conn, registration["trip_id"], now)
 
         conn.commit()
 
@@ -414,7 +419,8 @@ def list_registrations(trip_id):
     try:
         rows = conn.execute(
             """
-            SELECT id, name, email, status, registered_at, payment_deadline
+            SELECT id, name, email, status, registered_at, payment_deadline,
+                   status_changed_at
             FROM registrations
             WHERE trip_id = ?
             ORDER BY registered_at, id

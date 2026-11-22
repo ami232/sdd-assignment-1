@@ -247,6 +247,7 @@ components:
         status: { $ref: "#/components/schemas/RegistrationStatus" }
         registered_at: { type: string, format: date-time }
         payment_deadline: { type: string, format: date-time, nullable: true }
+        status_changed_at: { type: string, format: date-time, description: When the status last changed }
     RegistrationSummary:
       type: object
       required: [id, trip_id, status]
