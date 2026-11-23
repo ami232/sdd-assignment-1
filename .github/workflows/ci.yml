@@ -23,7 +23,25 @@ jobs:
           cache-dependency-path: services/${{ matrix.service }}/requirements*.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: ruff check .
-      - run: pytest
+            # the tests need a real SQL Server
+            # CI starts the same one docker-compose runs locally (with the example passwords)
+      - name: Start SQL Server and create the databases
+        working-directory: .
+        run: |
+          cp .env.example .env
+          docker compose up -d --wait sqlserver
+          docker compose run --rm db-init
+      - name: Point the tests at this service's database
+        working-directory: .
+        run: |
+          set -a; source .env; set +a
+          if [ "${{ matrix.service }}" = "library" ]; then
+            password="$LIBRARY_DB_PASSWORD"
+          else
+            password="$GROUP_DB_PASSWORD"
+          fi
+          echo "DATABASE_URL=mssql://${{ matrix.service }}_user:${password}@localhost:1433/${{ matrix.service }}_db" >> "$GITHUB_ENV"
+      - run: pytest --cov=${{ matrix.service }} --cov=database --cov-report=term-missing --cov-fail-under=70
 
   images:
     needs: test
