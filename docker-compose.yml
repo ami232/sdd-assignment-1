@@ -33,6 +33,28 @@ services:
     volumes:
       - ./db:/db:ro
     entrypoint: ["/opt/mssql-tools18/bin/sqlcmd", "-S", "sqlserver", "-U", "sa", "-C", "-b", "-i", "/db/init.sql"]
+  library:
+    build: ./services/library
+    depends_on:
+      # start only once db-init has created the database and the user this service signs in with
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mssql://library_user:${LIBRARY_DB_PASSWORD:?copy .env.example to .env first}@sqlserver:1433/library_db
+    ports:
+      - "8001:8000"
 
+  group:
+    build: ./services/group
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mssql://group_user:${GROUP_DB_PASSWORD:?copy .env.example to .env first}@sqlserver:1433/group_db
+      # group finds library by its compose service name, never by a hardcoded address
+      LIBRARY_URL: http://library:8000
+    ports:
+      - "8002:8000"
+      
 volumes:
   sqlserver-data:
