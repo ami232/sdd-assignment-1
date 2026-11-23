@@ -1,7 +1,9 @@
-import sqlite3
+from contextlib import closing
 
+import pymssql
 import pytest
 
+import database
 from group import library_client, repository, service
 
 # im using a fake library so that i can test the group service without relying on the real library
@@ -44,11 +46,8 @@ def fake_get_game_title(game_id: int) -> str | None:
 
 
 @pytest.fixture(autouse=True)
-def empty_database(tmp_path, monkeypatch):
-    """give every test its own empty group database and an empty pretend library"""
-    monkeypatch.setenv("DATA_DIR", str(tmp_path))
-    repository.create_tables()
-
+def empty_pretend_library(monkeypatch):
+    """give every test an empty pretend library in place of the real library service"""
     fake_library_games.clear()
     monkeypatch.setattr(library_client, "find_games_that_fit", fake_find_games_that_fit)
     monkeypatch.setattr(library_client, "get_game_title", fake_get_game_title)
@@ -147,6 +146,11 @@ def test_add_member_rejects_a_blank_name():
         service.add_member("   ")
 
 
+def test_add_member_rejects_a_name_that_is_too_long():
+    with pytest.raises(ValueError, match="name"):
+        service.add_member("A" * 101)
+
+
 def test_add_member_rejects_a_duplicate_name():
     service.add_member("Sara")
 
@@ -236,11 +240,14 @@ def test_create_night_rejects_guest_names_that_are_not_a_list():
 def test_create_night_rolls_back_everything_when_one_insert_fails():
     sara_id = repository.add_member("Sara")
 
-    # member 999 breaks the foreign key on the second insert, after the night row was written
-    with pytest.raises(sqlite3.IntegrityError):
-        repository.create_night("2026-10-12", 120, [sara_id, 999], [])
+    # the id after Sara's belongs to no member, so the second attendee insert breaks its foreign key after the night row was written
+    with pytest.raises(pymssql.IntegrityError):
+        repository.create_night("2026-10-12", 120, [sara_id, sara_id + 1], [])
 
-    assert repository.get_night(1) is None
+    with closing(database.get_connection()) as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT COUNT(*) AS night_count FROM nights")
+        assert cursor.fetchone()["night_count"] == 0
 
 
 def test_get_night_raises_not_found_for_an_unknown_id():
