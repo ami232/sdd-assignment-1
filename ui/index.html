@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game Night Planner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Game Night Planner</h1>
+    <p id="message" class="message" hidden></p>
+
+    <section>
+      <h2>Games</h2>
+      <ul id="game-list"></ul>
+      <form id="game-form">
+        <input name="title" placeholder="Title" required maxlength="100">
+        <input name="owner" placeholder="Owner" required maxlength="100">
+        <input name="min_players" type="number" min="1" placeholder="Min players" required>
+        <input name="max_players" type="number" min="1" placeholder="Max players" required>
+        <input name="playtime_minutes" type="number" min="1" placeholder="Minutes" required>
+        <button>Add game</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Members</h2>
+      <ul id="member-list"></ul>
+      <form id="member-form">
+        <input name="name" placeholder="Name" required maxlength="100">
+        <button>Add member</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Plan a night</h2>
+      <form id="night-form">
+        <label>Date <input name="night_date" type="date" required></label>
+        <label>Minutes available <input name="available_minutes" type="number" min="1" value="120" required></label>
+        <fieldset id="attendee-choices"><legend>Who is coming?</legend></fieldset>
+        <label>Guests, separated by commas <input name="guest_names" placeholder="Nadia, Leo"></label>
+        <button>Plan the night</button>
+      </form>
+      <ol id="plan-list"></ol>
+    </section>
+
+    <section>
+      <h2>Rate a game</h2>
+      <form id="rating-form">
+        <select name="member_id" id="rating-member" required></select>
+        <select name="game_id" id="rating-game" required></select>
+        <input name="score" type="number" min="1" max="10" placeholder="Score 1-10" required>
+        <button>Save rating</button>
+      </form>
+    </section>
+  </main>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
