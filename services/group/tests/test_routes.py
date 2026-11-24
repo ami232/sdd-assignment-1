@@ -81,3 +81,9 @@ def test_health_returns_503_when_the_database_is_unreachable(client, monkeypatch
     response = client.get("/health")
     assert response.status_code == 503
     assert response.get_json()["db"] == "unavailable"
+
+def test_cors_allows_only_the_ui_address(client):
+    from_ui = client.get("/members", headers={"Origin": "http://localhost:8080"})
+    from_another_site = client.get("/members", headers={"Origin": "https://example.com"})
+    assert from_ui.headers.get("Access-Control-Allow-Origin") == "http://localhost:8080"
+    assert from_another_site.headers.get("Access-Control-Allow-Origin") is None
