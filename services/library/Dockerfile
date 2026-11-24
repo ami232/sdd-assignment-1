@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM python:3.12-slim
-ENV PORT=8000
+ENV PORT=8000 \
+    PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN useradd --create-home --uid 10001 appuser \
@@ -20,7 +21,7 @@ USER appuser
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/${PORT}' || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+  CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['PORT'] + '/health', timeout=4)"
 
 CMD ["python", "app.py"]

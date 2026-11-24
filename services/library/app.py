@@ -1,4 +1,6 @@
-from flask import Flask, jsonify
+import time
+
+from flask import Flask, g, jsonify, request
 
 import config
 import database
@@ -16,6 +18,26 @@ def create_app() -> Flask:
     library_repository.seed_games()
 
     app.register_blueprint(library_blueprint)
+
+    @app.before_request
+    def start_timer():
+        """remember when the request started, so its duration can be logged"""
+        g.start_time = time.perf_counter()
+
+    @app.after_request
+    def log_request(response):
+        """print one line per request with its method, path, status and duration"""
+        duration_ms = (time.perf_counter() - g.start_time) * 1000
+        print(f"{request.method} {request.path} {response.status_code} {duration_ms:.0f}ms")
+        return response
+
+    @app.get("/health")
+    def health():
+        """report whether this service can use its own database, without asking any other service"""
+        version = config.get_app_version()
+        if database.check_database():
+            return jsonify({"status": "ok", "db": "ok", "version": version}), 200
+        return jsonify({"status": "error", "db": "unavailable", "version": version}), 503
 
     @app.get("/")
     def index():
@@ -37,5 +59,5 @@ def create_app() -> Flask:
     
 if __name__ == "__main__":
     port = config.get_port()
-    print(f"Starting app on 0.0.0.0:{port}")
+    print(f"Starting library on 0.0.0.0:{port}")
     create_app().run(host="0.0.0.0", port=port)

@@ -1,6 +1,7 @@
 import pytest
 
 import app
+import database
 from group import library_client
 
 CODENAMES = {"id": 1, "title": "Codenames", "owner": "Jinin", "min_players": 2, "max_players": 8, "playtime_minutes": 15}
@@ -63,3 +64,20 @@ def test_planning_a_night_returns_503_when_library_is_down(client, monkeypatch):
     response = client.get(f"/nights/{night['id']}/plan")
     assert response.status_code == 503
     assert response.get_json() == {"error": "library is unavailable, try again later"}
+
+def database_is_down() -> bool:
+    """stand in for the real health check when the database can't be reached"""
+    return False
+
+
+def test_health_reports_ok_when_the_database_works(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.get_json()["db"] == "ok"
+
+
+def test_health_returns_503_when_the_database_is_unreachable(client, monkeypatch):
+    monkeypatch.setattr(database, "check_database", database_is_down)
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert response.get_json()["db"] == "unavailable"

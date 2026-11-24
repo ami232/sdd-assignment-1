@@ -138,7 +138,9 @@ def test_fill_available_time_breaks_score_ties_by_title():
 def test_add_member_trims_the_name_and_starts_active():
     member = service.add_member("  Sara  ")
 
-    assert member == {"id": 1, "name": "Sara", "is_active": 1}
+    assert member["name"] == "Sara"
+    assert member["is_active"] == 1
+    assert repository.get_member(member["id"]) == member
 
 
 def test_add_member_rejects_a_blank_name():
