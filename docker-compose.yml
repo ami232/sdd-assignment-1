@@ -55,6 +55,14 @@ services:
       LIBRARY_URL: http://library:8000
     ports:
       - "8002:8000"
+
+  ui:
+    # a stock web server that serves the ui folder as it is, so locally the page is the same one Azure hosts
+    image: nginx:1.27-alpine
+    volumes:
+      - ./ui:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
       
 volumes:
   sqlserver-data:
