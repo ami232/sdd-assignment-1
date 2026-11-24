@@ -1,4 +1,6 @@
-from flask import Flask, jsonify
+import time
+
+from flask import Flask, g, jsonify, request
 
 import config
 import database
@@ -12,6 +14,26 @@ def create_app() -> Flask:
     database.wait_for_database()
     database.run_migrations()
     app.register_blueprint(group_blueprint)
+
+    @app.before_request
+    def start_timer():
+        """remember when the request started, so its duration can be logged"""
+        g.start_time = time.perf_counter()
+
+    @app.after_request
+    def log_request(response):
+        """print one line per request with its method, path, status and duration"""
+        duration_ms = (time.perf_counter() - g.start_time) * 1000
+        print(f"{request.method} {request.path} {response.status_code} {duration_ms:.0f}ms")
+        return response
+
+    @app.get("/health")
+    def health():
+        """report whether this service can use its own database, without asking any other service"""
+        version = config.get_app_version()
+        if database.check_database():
+            return jsonify({"status": "ok", "db": "ok", "version": version}), 200
+        return jsonify({"status": "error", "db": "unavailable", "version": version}), 503
 
     @app.get("/")
     def index():

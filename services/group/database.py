@@ -88,3 +88,18 @@ def _apply_migration(connection: pymssql.Connection, file_name: str) -> None:
         connection.rollback()
         raise
     print(f"Applied migration {file_name}")
+
+def check_database() -> bool:
+    """return True if this service can both read from and write to its own database"""
+    try:
+        with closing(get_connection()) as connection:
+            cursor = connection.cursor()
+            cursor.execute("SELECT COUNT(*) AS version_count FROM schema_migrations")
+            cursor.fetchone()
+            # a probe row is written and then rolled back, which proves writing works without leaving anything behind
+            cursor.execute("INSERT INTO schema_migrations (version) VALUES ('health-check-probe')")
+            connection.rollback()
+        return True
+    except pymssql.Error as error:
+        print(f"Health check failed: {error}")
+        return False

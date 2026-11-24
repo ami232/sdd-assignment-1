@@ -1,6 +1,7 @@
 import pytest
 
 import app
+import database
 
 
 @pytest.fixture
@@ -32,3 +33,18 @@ def test_get_game_returns_404_for_an_unknown_id(client):
     response = client.get("/games/999")
     assert response.status_code == 404
     assert response.get_json() == {"error": "no game with id 999"}
+
+def database_is_down() -> bool:
+    """stand in for the real health check when the database can't be reached"""
+    return False
+
+def test_health_reports_ok_when_the_database_works(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.get_json()["db"] == "ok"
+
+def test_health_returns_503_when_the_database_is_unreachable(client, monkeypatch):
+    monkeypatch.setattr(database, "check_database", database_is_down)
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert response.get_json()["db"] == "unavailable"
