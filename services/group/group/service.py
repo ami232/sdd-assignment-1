@@ -1,5 +1,6 @@
-import sqlite3
 from datetime import date
+
+import pymssql
 
 from group import library_client, repository
 
@@ -9,6 +10,7 @@ MAX_RECENCY_POINTS = 5
 DAYS_PER_WEEK = 7
 MIN_SCORE = 1
 MAX_SCORE = 10
+MAX_TEXT_LENGTH = 100
 
 
 class NotFoundError(Exception):
@@ -61,7 +63,7 @@ def add_member(name: str) -> dict:
     clean_name = _check_text(name, "name")
     try:
         member_id = repository.add_member(clean_name)
-    except sqlite3.IntegrityError as error:
+    except pymssql.IntegrityError as error:
         raise ValueError(f"a member named {clean_name} already exists") from error
     return repository.get_member(member_id)
 
@@ -225,9 +227,12 @@ def _check_game_exists(game_id: int) -> None:
 
 
 def _check_text(value, field_name: str) -> str:
-    """raise ValueError unless value is non-empty text, and return it trimmed"""
+    """raise ValueError unless value is non-empty text that fits in the database, and return it trimmed"""
     if not isinstance(value, str) or value.strip() == "":
         raise ValueError(f"{field_name} must be non-empty text")
+    # the database column holds at most this many characters, so longer text gets a clear 400 instead of a crash
+    if len(value.strip()) > MAX_TEXT_LENGTH:
+        raise ValueError(f"{field_name} must be at most {MAX_TEXT_LENGTH} characters")
     return value.strip()
 
 

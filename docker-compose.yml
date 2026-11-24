@@ -1,0 +1,60 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    # the image only exists for Intel/AMD, so on an Apple Silicon Mac it runs through Rosetta
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env first}
+      # sqlcmd reads its password from this variable, so the health check never has the password in its command line
+      SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env first}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-C", "-b", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  db-init:
+    # a one-off job that borrows the server image's sqlcmd tool to run db/init.sql, then exits
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env first}
+      LIBRARY_DB_PASSWORD: ${LIBRARY_DB_PASSWORD:?copy .env.example to .env first}
+      GROUP_DB_PASSWORD: ${GROUP_DB_PASSWORD:?copy .env.example to .env first}
+    volumes:
+      - ./db:/db:ro
+    entrypoint: ["/opt/mssql-tools18/bin/sqlcmd", "-S", "sqlserver", "-U", "sa", "-C", "-b", "-i", "/db/init.sql"]
+  library:
+    build: ./services/library
+    depends_on:
+      # start only once db-init has created the database and the user this service signs in with
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mssql://library_user:${LIBRARY_DB_PASSWORD:?copy .env.example to .env first}@sqlserver:1433/library_db
+    ports:
+      - "8001:8000"
+
+  group:
+    build: ./services/group
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mssql://group_user:${GROUP_DB_PASSWORD:?copy .env.example to .env first}@sqlserver:1433/group_db
+      # group finds library by its compose service name, never by a hardcoded address
+      LIBRARY_URL: http://library:8000
+    ports:
+      - "8002:8000"
+      
+volumes:
+  sqlserver-data:

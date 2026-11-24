@@ -17,9 +17,8 @@ def unreachable_library(players: int, minutes: int) -> list[dict]:
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
-    """give each test a fresh group app with its own database and a pretend library"""
-    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+def client(monkeypatch):
+    """give each test a fresh group app with an empty database and a pretend library"""
     monkeypatch.setattr(library_client, "find_games_that_fit", fake_find_games_that_fit)
     return app.create_app().test_client()
 

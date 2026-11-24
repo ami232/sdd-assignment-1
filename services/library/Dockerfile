@@ -1,12 +1,10 @@
 # syntax=docker/dockerfile:1
 FROM python:3.12-slim
-ENV PORT=8000 \
-    DATA_DIR=/data
+ENV PORT=8000
 WORKDIR /app
 
 RUN useradd --create-home --uid 10001 appuser \
- && mkdir -p /data \
- && chown -R appuser:appuser /data /app
+ && chown -R appuser:appuser /app
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
@@ -14,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # only what the app needs to run
 COPY app.py config.py database.py ./
 COPY library/ ./library/
+COPY migrations/ ./migrations/
 
 RUN chown -R appuser:appuser /app
 

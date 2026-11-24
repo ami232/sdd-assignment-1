@@ -1,45 +1,36 @@
-import os
-import sqlite3
 from contextlib import closing
 
+import pymssql
+
 import database
-
-GROUP_DIR = os.path.dirname(os.path.abspath(__file__))
-SCHEMA_FILE_PATH = os.path.join(GROUP_DIR, "schema.sql")
-
-
-def create_tables() -> None:
-    """create the group tables if they do not exist yet, keeping existing data"""
-    with closing(database.get_connection()) as connection:
-        database.run_sql_file(connection, SCHEMA_FILE_PATH)
 
 
 def add_member(name: str) -> int:
     """save a new active member and return their id"""
     with closing(database.get_connection()) as connection:
-        cursor = connection.execute("INSERT INTO members (name) VALUES (?)", (name,))
+        cursor = connection.cursor()
+        cursor.execute("INSERT INTO members (name) OUTPUT INSERTED.id VALUES (%s)", (name,))
+        member_id = cursor.fetchone()["id"]
         connection.commit()
-        return cursor.lastrowid
+        return member_id
 
 
 def get_member(member_id: int) -> dict | None:
     """return one member, or None if no member has that id"""
     with closing(database.get_connection()) as connection:
-        row = connection.execute(
-            "SELECT id, name, is_active FROM members WHERE id = ?", (member_id,)
-        ).fetchone()
-    if row is None:
-        return None
-    return dict(row)
+        cursor = connection.cursor()
+        cursor.execute("SELECT id, name, is_active FROM members WHERE id = %s", (member_id,))
+        member = cursor.fetchone()
+    return member
 
 
 def list_members() -> list[dict]:
     """return every member, active and archived, sorted by name"""
     with closing(database.get_connection()) as connection:
-        rows = connection.execute(
-            "SELECT id, name, is_active FROM members ORDER BY name"
-        ).fetchall()
-    return _rows_to_dicts(rows)
+        cursor = connection.cursor()
+        cursor.execute("SELECT id, name, is_active FROM members ORDER BY name")
+        members = cursor.fetchall()
+    return members
 
 
 def archive_member(member_id: int) -> bool:
@@ -57,49 +48,57 @@ def create_night(
 ) -> int:
     """save a night with its attendees and guests in one transaction and return its id"""
     with closing(database.get_connection()) as connection:
-        # the inner with commits only if every insert works, otherwise it rolls all of them back
-        with connection:
-            cursor = connection.execute(
-                "INSERT INTO nights (night_date, available_minutes) VALUES (?, ?)",
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO nights (night_date, available_minutes) OUTPUT INSERTED.id VALUES (%s, %s)",
                 (night_date, available_minutes),
             )
-            night_id = cursor.lastrowid
+            night_id = cursor.fetchone()["id"]
 
             for member_id in attendee_ids:
-                connection.execute(
-                    "INSERT INTO night_attendees (night_id, member_id) VALUES (?, ?)",
+                cursor.execute(
+                    "INSERT INTO night_attendees (night_id, member_id) VALUES (%s, %s)",
                     (night_id, member_id),
                 )
             for guest_name in guest_names:
-                connection.execute(
-                    "INSERT INTO night_guests (night_id, guest_name) VALUES (?, ?)",
+                cursor.execute(
+                    "INSERT INTO night_guests (night_id, guest_name) VALUES (%s, %s)",
                     (night_id, guest_name),
                 )
+            # one commit at the end, so the night is saved together with all its attendees and guests or not at all
+            connection.commit()
+        except pymssql.Error:
+            connection.rollback()
+            raise
         return night_id
 
 
 def get_night(night_id: int) -> dict | None:
     """return a night with its attendees and guests, or None if it does not exist"""
     with closing(database.get_connection()) as connection:
-        night_row = connection.execute(
-            "SELECT id, night_date, available_minutes FROM nights WHERE id = ?", (night_id,)
-        ).fetchone()
-        if night_row is None:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT id, night_date, available_minutes FROM nights WHERE id = %s", (night_id,)
+        )
+        night = cursor.fetchone()
+        if night is None:
             return None
 
-        attendee_rows = connection.execute(
+        cursor.execute(
             "SELECT members.id, members.name FROM night_attendees"
             " JOIN members ON members.id = night_attendees.member_id"
-            " WHERE night_attendees.night_id = ? ORDER BY members.name",
+            " WHERE night_attendees.night_id = %s ORDER BY members.name",
             (night_id,),
-        ).fetchall()
-        guest_rows = connection.execute(
-            "SELECT guest_name FROM night_guests WHERE night_id = ? ORDER BY guest_name",
-            (night_id,),
-        ).fetchall()
+        )
+        night["attendees"] = cursor.fetchall()
 
-    night = dict(night_row)
-    night["attendees"] = _rows_to_dicts(attendee_rows)
+        cursor.execute(
+            "SELECT guest_name FROM night_guests WHERE night_id = %s ORDER BY guest_name",
+            (night_id,),
+        )
+        guest_rows = cursor.fetchall()
+
     night["guests"] = []
     for guest_row in guest_rows:
         night["guests"].append(guest_row["guest_name"])
@@ -109,10 +108,13 @@ def get_night(night_id: int) -> dict | None:
 def save_rating(member_id: int, game_id: int, score: int) -> None:
     """save a member's score for a game, replacing their old score if they had one"""
     with closing(database.get_connection()) as connection:
-        connection.execute(
-            "INSERT INTO ratings (member_id, game_id, score) VALUES (?, ?, ?)"
-            " ON CONFLICT (member_id, game_id) DO UPDATE SET score = excluded.score",
-            (member_id, game_id, score),
+        cursor = connection.cursor()
+        # SQL Server has no ON CONFLICT, so the existing score is updated first and a new row is inserted only if there was none
+        cursor.execute(
+            "UPDATE ratings SET score = %s WHERE member_id = %s AND game_id = %s;"
+            " IF @@ROWCOUNT = 0"
+            " INSERT INTO ratings (member_id, game_id, score) VALUES (%s, %s, %s)",
+            (score, member_id, game_id, member_id, game_id, score),
         )
         connection.commit()
 
@@ -120,9 +122,9 @@ def save_rating(member_id: int, game_id: int, score: int) -> None:
 def get_ratings_by_member(member_id: int) -> dict[int, int]:
     """return a member's scores as a dict of game id to score"""
     with closing(database.get_connection()) as connection:
-        rows = connection.execute(
-            "SELECT game_id, score FROM ratings WHERE member_id = ?", (member_id,)
-        ).fetchall()
+        cursor = connection.cursor()
+        cursor.execute("SELECT game_id, score FROM ratings WHERE member_id = %s", (member_id,))
+        rows = cursor.fetchall()
     scores = {}
     for row in rows:
         scores[row["game_id"]] = row["score"]
@@ -132,20 +134,25 @@ def get_ratings_by_member(member_id: int) -> dict[int, int]:
 def log_play(night_id: int, game_id: int) -> int:
     """record that a game was played on a night and return the play's id"""
     with closing(database.get_connection()) as connection:
-        cursor = connection.execute(
-            "INSERT INTO plays (night_id, game_id) VALUES (?, ?)", (night_id, game_id)
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO plays (night_id, game_id) OUTPUT INSERTED.id VALUES (%s, %s)",
+            (night_id, game_id),
         )
+        play_id = cursor.fetchone()["id"]
         connection.commit()
-        return cursor.lastrowid
+        return play_id
 
 
 def get_last_played_dates() -> dict[int, str]:
     """return a dict of game id to the date of the most recent night it was played"""
     with closing(database.get_connection()) as connection:
-        rows = connection.execute(
+        cursor = connection.cursor()
+        cursor.execute(
             "SELECT plays.game_id, MAX(nights.night_date) AS last_played FROM plays"
             " JOIN nights ON nights.id = plays.night_id GROUP BY plays.game_id"
-        ).fetchall()
+        )
+        rows = cursor.fetchall()
     last_played_dates = {}
     for row in rows:
         last_played_dates[row["game_id"]] = row["last_played"]
@@ -155,7 +162,8 @@ def get_last_played_dates() -> dict[int, str]:
 def get_unrated_plays() -> list[dict]:
     """return each active member and game they played at a night but never rated"""
     with closing(database.get_connection()) as connection:
-        rows = connection.execute(
+        cursor = connection.cursor()
+        cursor.execute(
             "SELECT DISTINCT members.id AS member_id, members.name AS member_name, plays.game_id"
             " FROM members"
             " JOIN night_attendees ON night_attendees.member_id = members.id"
@@ -163,24 +171,17 @@ def get_unrated_plays() -> list[dict]:
             " LEFT JOIN ratings ON ratings.member_id = members.id"
             " AND ratings.game_id = plays.game_id"
             " WHERE members.is_active = 1 AND ratings.member_id IS NULL"
-            " ORDER BY members.name, plays.game_id"
-        ).fetchall()
-    return _rows_to_dicts(rows)
+            " ORDER BY member_name, game_id"
+        )
+        unrated_plays = cursor.fetchall()
+    return unrated_plays
 
 
 def _set_member_active(member_id: int, is_active: int) -> bool:
     """set a member's is_active flag and return False if no member has that id"""
     with closing(database.get_connection()) as connection:
-        cursor = connection.execute(
-            "UPDATE members SET is_active = ? WHERE id = ?", (is_active, member_id)
-        )
+        cursor = connection.cursor()
+        cursor.execute("UPDATE members SET is_active = %s WHERE id = %s", (is_active, member_id))
+        updated_count = cursor.rowcount
         connection.commit()
-        return cursor.rowcount > 0
-
-
-def _rows_to_dicts(rows: list[sqlite3.Row]) -> list[dict]:
-    """turn sqlite rows into plain dicts so they can be returned as json"""
-    results = []
-    for row in rows:
-        results.append(dict(row))
-    return results
+        return updated_count > 0

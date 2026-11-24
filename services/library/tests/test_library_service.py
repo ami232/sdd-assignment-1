@@ -1,5 +1,8 @@
+from contextlib import closing
+
 import pytest
 
+import database
 from library import repository, service
 
 
@@ -14,13 +17,6 @@ def make_game(**changes) -> dict:
     }
     game.update(changes)
     return game
-
-
-@pytest.fixture(autouse=True)
-def empty_library(tmp_path, monkeypatch):
-    """give every test its own empty database file so tests never share data"""
-    monkeypatch.setenv("DATA_DIR", str(tmp_path))
-    repository.create_tables()
 
 
 def test_validate_game_accepts_a_valid_game():
@@ -49,6 +45,11 @@ def test_validate_game_rejects_a_missing_field(missing_field):
 def test_validate_game_rejects_a_blank_title():
     with pytest.raises(ValueError, match="title"):
         service.validate_game(make_game(title="   "))
+
+
+def test_validate_game_rejects_a_title_that_is_too_long():
+    with pytest.raises(ValueError, match="title"):
+        service.validate_game(make_game(title="A" * 101))
 
 
 def test_validate_game_rejects_an_owner_that_is_not_text():
@@ -179,9 +180,20 @@ def test_seed_games_does_not_touch_a_library_that_already_has_games():
     assert len(service.list_games()) == 1
 
 
-def test_create_tables_keeps_existing_games():
+def test_running_migrations_again_keeps_existing_games():
     service.add_game(make_game())
 
-    repository.create_tables()
+    database.run_migrations()
 
     assert len(service.list_games()) == 1
+
+
+def test_run_migrations_records_each_applied_file():
+    with closing(database.get_connection()) as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT version FROM schema_migrations")
+        versions = []
+        for row in cursor.fetchall():
+            versions.append(row["version"])
+
+    assert "001_init.sql" in versions

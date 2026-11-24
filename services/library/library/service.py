@@ -2,6 +2,7 @@ from library import repository
 
 TEXT_FIELDS = ["title", "owner"]
 NUMBER_FIELDS = ["min_players", "max_players", "playtime_minutes"]
+MAX_TEXT_LENGTH = 100
 
 
 def validate_game(game: dict) -> None:
@@ -17,7 +18,10 @@ def validate_game(game: dict) -> None:
         value = game[field_name]
         if not isinstance(value, str) or value.strip() == "":
             raise ValueError(f"{field_name} must be non-empty text")
-
+        # the database column holds at most this many characters, so longer text gets a clear 400 instead of a crash
+        if len(value.strip()) > MAX_TEXT_LENGTH:
+            raise ValueError(f"{field_name} must be at most {MAX_TEXT_LENGTH} characters")
+            
     for field_name in NUMBER_FIELDS:
         _check_positive_whole_number(game[field_name], field_name)
 

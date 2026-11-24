@@ -1,7 +1,6 @@
 import os
 
 DEFAULT_PORT = 8000
-DEFAULT_DATA_DIR = "./data"
 MIN_PORT = 1
 MAX_PORT = 65535
 
@@ -19,6 +18,9 @@ def get_port() -> int:
         return DEFAULT_PORT
     return port
 
-def get_data_dir() -> str:
-    """return the folder where the SQLite file will be stored"""
-    return os.environ.get("DATA_DIR", DEFAULT_DATA_DIR)
+def get_database_url() -> str:
+    """return the connection string from DATABASE_URL, which has no default because it contains a password"""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not set, for example mssql://library_user:password@localhost:1433/library_db")
+    return database_url

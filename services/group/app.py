@@ -1,15 +1,16 @@
 from flask import Flask, jsonify
 
 import config
-from group import repository as group_repository
+import database
 from group.routes import group_blueprint
 
 
 def create_app() -> Flask:
     """build the Flask app and register its routes and error handlers"""
     app = Flask(__name__)
-    # create what is missing on every boot
-    group_repository.create_tables()
+    # wait for the database and bring its schema up to date before serving any request
+    database.wait_for_database()
+    database.run_migrations()
     app.register_blueprint(group_blueprint)
 
     @app.get("/")
@@ -32,5 +33,5 @@ def create_app() -> Flask:
     
 if __name__ == "__main__":
     port = config.get_port()
-    print(f"Starting app on 0.0.0.0:{port}, data dir {config.get_data_dir()}")
+    print(f"Starting group on 0.0.0.0:{port}")
     create_app().run(host="0.0.0.0", port=port)

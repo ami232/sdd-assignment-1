@@ -1,2 +1,3 @@
-   [lint]
-   ignore = ["TRY004"]
+[lint]
+# bad input raises ValueError on purpose, because the routes turn every ValueError into a 400 and a TypeError would become a 500
+ignore = ["TRY004"]
