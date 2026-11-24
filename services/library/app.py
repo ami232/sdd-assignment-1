@@ -1,6 +1,7 @@
 import time
 
 from flask import Flask, g, jsonify, request
+from flask_cors import CORS
 
 import config
 import database
@@ -11,6 +12,9 @@ from library.routes import library_blueprint
 def create_app() -> Flask:
     """build the Flask app and register its routes and error handlers"""
     app = Flask(__name__)
+
+    # browsers may only call this service from the UI's address, and only send JSON bodies
+    CORS(app, origins=config.get_cors_origin(), allow_headers=["Content-Type"])
 
     # wait for the database, bring its schema up to date, and seed it only if it is empty, before serving any request
     database.wait_for_database()

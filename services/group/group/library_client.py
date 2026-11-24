@@ -3,7 +3,7 @@ import os
 import requests
 
 DEFAULT_LIBRARY_URL = "http://library:8000"
-TIMEOUT_SECONDS = 2
+DEFAULT_TIMEOUT_SECONDS = 2
 
 class LibraryUnavailableError(Exception):
     """raised when the library service can't be reached or answers with an unexpected error"""
@@ -11,6 +11,20 @@ class LibraryUnavailableError(Exception):
 def get_library_url() -> str:
     """return the base url of the library service, read from the LIBRARY_URL environment variable"""
     return os.environ.get("LIBRARY_URL", DEFAULT_LIBRARY_URL)
+
+def get_timeout_seconds() -> float:
+    """return how many seconds to wait for library, from LIBRARY_TIMEOUT_S, or the default if it is missing or not a positive number"""
+    timeout_text = os.environ.get("LIBRARY_TIMEOUT_S", str(DEFAULT_TIMEOUT_SECONDS))
+    try:
+        timeout_seconds = float(timeout_text)
+    except ValueError:
+        print(f"LIBRARY_TIMEOUT_S={timeout_text} is not a number, using {DEFAULT_TIMEOUT_SECONDS}")
+        return DEFAULT_TIMEOUT_SECONDS
+
+    if timeout_seconds <= 0:
+        print(f"LIBRARY_TIMEOUT_S={timeout_seconds} is not positive, using {DEFAULT_TIMEOUT_SECONDS}")
+        return DEFAULT_TIMEOUT_SECONDS
+    return timeout_seconds
 
 def find_games_that_fit(players: int, minutes: int) -> list[dict]:
     """ask library for the games that fit this many players in this many minutes"""
@@ -34,6 +48,6 @@ def _get_from_library(path: str, params: dict | None = None) -> requests.Respons
     """send a GET request to library and give up after a few seconds, so a slow library can never make group hang"""
     url = get_library_url() + path
     try:
-        return requests.get(url, params=params, timeout=TIMEOUT_SECONDS)
+        return requests.get(url, params=params, timeout=get_timeout_seconds())
     except requests.RequestException as error:
         raise LibraryUnavailableError(f"library could not be reached at {url}") from error
