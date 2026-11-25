@@ -1,0 +1,88 @@
+# Whole system locally: docker compose up --build
+# The two domain services, one container each, and nginx serving the static UI.
+# Open http://localhost:8080. SQL Server and a db-init job run beside them;
+# the services still use SQLite until they are switched over.
+services:
+  trip-management:
+    build: ./services/trip-management
+    environment:
+      PORT: "8000"
+      ROOMS_URL: http://room-allocation:8000
+      CORS_ORIGIN: http://localhost:8080
+    ports:
+      - "8001:8000"
+    volumes:
+      - trips-data:/data
+
+  room-allocation:
+    build: ./services/room-allocation
+    environment:
+      PORT: "8000"
+      TRIPS_URL: http://trip-management:8000
+      CORS_ORIGIN: http://localhost:8080
+    ports:
+      - "8002:8000"
+    volumes:
+      - rooms-data:/data
+    depends_on:
+      - trip-management
+
+  # The UI is only static files: a stock nginx image serves the ui/
+  # folder as it is, with no Dockerfile. The browser then calls the two
+  # services directly on 8001 and 8002 (see ui/config.js).
+  ui:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./ui:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - trip-management
+      - room-allocation
+
+  # The database server. One server, but each service gets its own
+  # database (trips, rooms) and its own login, created by db-init below.
+  # The passwords come from .env (copy .env.example), so they are never
+  # committed.
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env and set the passwords}
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" -b -o /dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  # One-shot job: waits until SQL Server answers, runs db/init.sql (which
+  # only creates what is missing) and exits. sqlcmd fills the script's
+  # $(TRIPS_DB_PASSWORD) and $(ROOMS_DB_PASSWORD) from these variables.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env and set the passwords}
+      TRIPS_DB_PASSWORD: ${TRIPS_DB_PASSWORD:?copy .env.example to .env and set the passwords}
+      ROOMS_DB_PASSWORD: ${ROOMS_DB_PASSWORD:?copy .env.example to .env and set the passwords}
+    volumes:
+      - ./db:/db:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -b -i /db/init.sql
+    restart: "no"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+# One volume per service: each owns its own SQLite file until the
+# services are switched to SQL Server.
+volumes:
+  trips-data:
+  rooms-data:
+  sqlserver-data:

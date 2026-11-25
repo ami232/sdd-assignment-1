@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trip · Ski Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="site-header">
+        <a href="index.html" class="brand">
+            <!-- A small gondola gliding slowly along a cobalt cable. -->
+            <svg viewBox="0 0 100 40" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 10 L98 4" stroke="#2f5bbf" stroke-width="2"/>
+                <g class="cabin">
+                    <path d="M16 9 V15" stroke="#1f2d3d" stroke-width="2"/>
+                    <rect x="6" y="15" width="20" height="19" rx="5" fill="#d9472f"/>
+                    <rect x="9" y="18" width="14" height="6" rx="2" fill="#f7f1e8"/>
+                    <path d="M16 18 V34" stroke="#1f2d3d" stroke-width="1.5"/>
+                </g>
+            </svg>
+            Ski <span>Club</span></a>
+        <nav>
+            <a href="organiser.html" class="active">Organiser</a>
+            <a href="my-trip.html">My trip</a>
+        </nav>
+    </header>
+
+    <main>
+        <a href="organiser.html" class="back-link">← All trips</a>
+
+        <section class="page-heading">
+            <p class="eyebrow">Trip</p>
+            <h1 id="trip-name">Loading…</h1>
+            <p class="muted" id="trip-where"></p>
+        </section>
+
+        <div id="message" hidden></div>
+
+        <section class="stats" id="stats"></section>
+
+        <section class="section">
+            <div class="section-heading">
+                <h2>Registrations</h2>
+                <span class="muted" id="registration-count"></span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>No.</th><th>Student</th><th>Email</th><th>Status</th><th>Room</th><th></th></tr>
+                    </thead>
+                    <tbody id="registrations"></tbody>
+                </table>
+            </div>
+            <div class="panel">
+                <h3>Register a student</h3>
+                <p class="muted">A free place is held for 48 hours until they pay. When the trip is full they join the waiting list, first come first served. Give them their number so they can open “My trip”.</p>
+                <form id="register">
+                    <label>Name <input name="name" placeholder="Sofia García" required></label>
+                    <label>Email <input type="email" name="email" placeholder="sofia@example.com" required></label>
+                    <button type="submit">Register</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-heading">
+                <h2>Rooms</h2>
+                <span class="muted" id="need-room"></span>
+            </div>
+            <div class="grid" id="rooms"></div>
+            <div class="two-columns">
+                <div class="panel">
+                    <h3>Add a room</h3>
+                    <form id="create-room" class="stacked">
+                        <label>Room name <input name="name" placeholder="Room 101" required></label>
+                        <label>Beds (1–6) <input type="number" name="capacity" min="1" max="6" placeholder="4" required></label>
+                        <button type="submit">Add room</button>
+                    </form>
+                </div>
+                <div class="panel">
+                    <h3>Put a student in a room</h3>
+                    <form id="assign" class="stacked">
+                        <label>Paid student without a room <select name="registration_id" id="unassigned" required></select></label>
+                        <label>Room <select name="room_id" id="free-rooms" required></select></label>
+                        <button type="submit">Assign</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Roommate requests</h2>
+            <div class="panel">
+                <form id="preference">
+                    <label>Student <select name="registration_id" class="confirmed-students" required></select></label>
+                    <label>Would like to share with <select name="preferred_registration_id" class="confirmed-students" required></select></label>
+                    <button type="submit">Save request</button>
+                </form>
+                <div id="preferences"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">Ski Club · Trips, places and rooms for the university ski club</footer>
+
+    <script src="config.js"></script>
+    <script src="common.js"></script>
+    <script src="trip.js"></script>
+</body>
+</html>

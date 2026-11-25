@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My trip · Ski Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="site-header">
+        <a href="index.html" class="brand">
+            <!-- A small gondola gliding slowly along a cobalt cable. -->
+            <svg viewBox="0 0 100 40" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 10 L98 4" stroke="#2f5bbf" stroke-width="2"/>
+                <g class="cabin">
+                    <path d="M16 9 V15" stroke="#1f2d3d" stroke-width="2"/>
+                    <rect x="6" y="15" width="20" height="19" rx="5" fill="#d9472f"/>
+                    <rect x="9" y="18" width="14" height="6" rx="2" fill="#f7f1e8"/>
+                    <path d="M16 18 V34" stroke="#1f2d3d" stroke-width="1.5"/>
+                </g>
+            </svg>
+            Ski <span>Club</span></a>
+        <nav>
+            <a href="organiser.html">Organiser</a>
+            <a href="my-trip.html" class="active">My trip</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="page-heading">
+            <p class="eyebrow">My trip</p>
+            <h1>Ready for the mountains?</h1>
+            <p class="muted">Use the registration number your organiser gave you and the email you signed up with.</p>
+        </section>
+
+        <div id="message" hidden></div>
+
+        <section class="panel section lookup" id="lookup">
+            <img src="otter.png" alt="" class="otter" onerror="this.remove()">
+            <form id="find-trip">
+                <label>Registration number <input type="number" name="registration_id" min="1" placeholder="12" required></label>
+                <label>Email <input type="email" name="email" placeholder="you@example.com" required></label>
+                <button type="submit">Find my trip</button>
+            </form>
+        </section>
+
+        <div id="my-trip" hidden>
+            <section class="panel section">
+                <p class="eyebrow" id="greeting"></p>
+                <h2 id="trip-title"></h2>
+                <p class="muted" id="trip-dates"></p>
+                <div class="countdown" id="countdown"></div>
+                <p class="muted" id="countdown-note"></p>
+            </section>
+
+            <section class="two-columns section">
+                <div class="panel">
+                    <h3>Your place</h3>
+                    <p><span class="pill" id="status"></span></p>
+                    <p class="muted" id="status-note"></p>
+                </div>
+                <div class="panel">
+                    <h3>Your room</h3>
+                    <p id="room"></p>
+                </div>
+            </section>
+
+            <section class="panel section packing">
+                <div>
+                    <div class="section-heading">
+                        <h2>Pack your bags <span class="aside">(maybe not all of them)</span></h2>
+                        <span class="muted" id="packed"></span>
+                    </div>
+                    <ul class="checklist" id="checklist"></ul>
+                </div>
+                <img src="packer.jpg" alt="A skier carrying far too many scarves, jumpers and bags next to a red suitcase" class="packer">
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">Ski Club · Trips, places and rooms for the university ski club</footer>
+
+    <script src="config.js"></script>
+    <script src="common.js"></script>
+    <script src="my-trip.js"></script>
+</body>
+</html>

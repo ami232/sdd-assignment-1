@@ -1,166 +1,255 @@
-## Individual Assignment 1
-**Topic:** Build a Simple Application to Serve as the Basis for DevOps Work
+# Ski Club Manager
 
-**Deadline:** 2026-10-12 23:59
+**Software Development & DevOps | Individual Assignments 1 and 2**  
+Alicia Mueller Reglero | IE University
 
-**Written Comprehension Check:** in class, at/after the deadline session (date announced separately)
+*Managing the trip is one thing. Managing everyone going is another.*
 
-### Assignment Philosophy
-AI use is allowed and expected. That changes what counts as evidence of effort: a working app no longer proves you made real design decisions, since AI makes "working" cheap. Grading weights the things AI can't do for you: the decisions you made along the way, and your ability to explain your own code cold, on paper, with no notes.
+## Why I built this
 
-Keep it real, not academic. Build something you could plausibly ship to a real user. You can invent stakeholders, users, or scale requirements to justify design choices (e.g., "10,000 daily users, so..."). Stakeholders are people or organizations, not tools like Git, Azure, or Blackboard.
+Organising ski trips for a university club has made me realise that the difficult part isn't necessarily choosing the destination or planning the dates. It's everything that happens once registrations open.
 
-### Objective
-Design and build a **minimal, monolithic application** that is **fully self-contained and runs locally in a single Docker container**. Everything it needs lives inside that one container: no cloud account, no external database, no second service.
+Places fill up quickly, payments arrive at different times, waiting lists keep changing, and room assignments depend on who has actually confirmed their place.
 
-**Assignment 1 ends at "it runs locally in a container."** Assignment 2 is where you break this app into separate services and deploy them to Azure. That's why §3 asks you to design two feature domains that are *logically* separable now: you're drawing the seam in Assignment 1 and cutting along it in Assignment 2.
+I built Ski Club Manager around those challenges: a small web application that keeps registrations, payments and accommodation connected, without making the underlying system unnecessarily complicated.
 
-You do not design any Docker or cloud tooling here. A **Dockerfile template** and a **contract checker** (`run.sh`) are provided to everyone in `container/`. You copy the template to your repo root and fill in the four `TODO` lines it marks, nothing else. Your real job is §7: making your *application* behave so that template runs it.
+In Assignment 1 it was one Flask app in one container. For Assignment 2 it is split along the seam drawn then: **Trip Management** and **Room Allocation** are two Flask services, each with its own database, and the web pages are a static **UI** in `ui/` that calls both services from the browser. Docker Compose runs all of it together.
 
-### 1. Scope & Architecture Constraints
-This assignment caps *how many processes/containers it runs in*, not what technology you use. Some constraints below are hard requirements, needed so the shared Dockerfile template and checker work on everyone's app. Everything else is your choice, as long as you can justify it.
+## 1. How it works
 
-**1a. Hard requirements (container homogeneity, not a complexity judgment):**
-- Single process, single container. No microservices, multiple repos, or separately deployed services. Splitting comes in Assignment 2.
-- **Storage: SQLite**, as a file inside the container at one documented path. Mandatory: every app needs the same storage shape for the provided tooling and for Assignment 2.
-- One dependency manifest at the repo root (`requirements.txt`, `package.json` + lockfile, etc). No per-folder manifests.
-- **Do not author your own Dockerfile from scratch**, and no `docker-compose.yml` or CI workflow (`.github/workflows/`) at all. Use the provided template in `container/`: fill its four `TODO` lines, leave the rest. Designing images and pipelines yourself is Assignment 2 content.
-- No Terraform/Bicep/ARM or other IaC you author.
-- **No cloud deployment of any kind** (Azure, AWS, Render, Heroku, custom domain). Assignment 1 is local only: `docker build`, `docker run`, done. Cloud is Assignment 2.
-- No external managed database, cache, or second container. Everything lives inside your one container.
+### Trip registration and payments
 
-**1b. Free choices, justify each in `ADR.md`:**
-- **Backend language/framework**: explain why you chose it and what it buys you. Example: using Django when nothing needs it over Flask/FastAPI is graded down as poor judgment, not banned.
-- Whether to add authentication/login.
-- Any pattern beyond the basics (GraphQL, WebSockets, in-process background task, heavier ORM), as long as it fits the single-process constraint.
-- Frontend approach: plain HTML/CSS/JS, templates, or heavier, served by the same process.
-- Dependency count: soft cap ~12 third-party packages.
-- File count: rough guidance ~15-50 files (excluding lockfiles/venvs/node_modules).
+Each trip has a fixed number of places. When a student registers, the application checks availability and assigns one of four statuses:
 
-**1c. Out of scope, regardless of justification:** message brokers (Redis/RabbitMQ), background job runners (Celery, cron containers), or an actual multi-service split. These all assume more than one process, which §7's single-container contract doesn't support. If your use case wants them, treat that as a signal, not a blocker: design your two feature domains (§3) to be *logically* separable now (that's the second required `ADR.md` entry, §5), and leave the physical split and anything it needs to Assignment 2.
-
-**1d. Use a stack you're already comfortable in.** For most students that's Python. Anything works if you can write and explain the code yourself, cold, at the comprehension check (§6). Picking an unfamiliar language because AI can generate it too is the fastest way to fail that check.
-
-New ideas for the app can be proposed to the professor, but still need to comply with this section.
-
-### 2. Application Scope
-Propose your own use case and get it pre-approved before you start building. It needs enough substance for two genuinely distinct backend feature domains (§3) plus SQLite persistence; a single-entity CRUD toy ("add and remove a task, nothing else") is probably too thin. Most ideas need a second feature domain with real purpose: tasks + tags, posts + comments, links + click analytics, weather dashboard + saved locations/alerts. Bring your specific plan to the professor before writing code.
-
-### 3. Required Features
-- **SQLite persistence** (required): underlies both domains. Neither domain counts as "working" unless it reads/writes through SQLite.
-- **At least 2 distinct backend feature domains** (required): each with its own responsibility and data, coupled as little as possible. Each one should be something you could lift out into its own service in Assignment 2 without rewriting it. You're not building that split now (§1c), but you must be able to point at where the seam goes and name what crosses it.
-- A third domain, or extra polish on the two above, is optional and worth a small amount folded into Code Quality. Don't spend hours here instead of on §4/§5.
-
-### 4. Testing
-Automated unit tests (pytest/unittest, Jest/Mocha, or your language's equivalent) covering the **core business logic** of your two domains, not framework glue or routing, at **≥70% coverage**, measured with a standard tool (pytest-cov, coverage.py, nyc, jest --coverage). Report the coverage command and result in your README.
-
-### 5. Process Deliverables
-The core of the assignment: artifacts that make your design thinking visible over time, not just a snapshot at the deadline.
-
-**`ADR.md`**, a lightweight Architecture Decision Record log at the repo root. Exactly 5 entries, this format:
-```
-## [N]. <Title>
-Date: YYYY-MM-DD
-Status: Decided
-Context: 1-3 sentences, what forced this decision
-Decision: 1-2 sentences, what you chose
-Alternatives considered: at least one real alternative, and why you rejected it
-Consequences: 1-2 sentences, what this costs or enables later
-```
-One entry required for each:
-1. **Backend language/framework choice**: the justification from §1b (what it buys you, what you rejected).
-2. **How you scoped your two feature domains to be independently modularizable**.
-3. **A data-model/schema decision in SQLite**: e.g. how the two domains' data relates. Should visually match the database diagram in §8.
-4. **Your testing approach**: what you prioritized toward the 70% bar, what you left thinner, and why.
-5. **One thing you deliberately chose not to build**, and why.
-
-Add entries as you make the decisions, not all at once. Your 5 entries must span at least **3 distinct commit dates**; landing them all in one commit defeats the point of the log.
-
-**`AI_USAGE.md`**, a structured AI usage log. One row per meaningful interaction:
-
-| Date/commit | Tool | Prompt | Disposition (Accepted/Modified/Rejected) | What changed & why (if modified) | In my own words, how this works |
-|---|---|---|---|---|---|
-
-The last column matters most: explain, using your own function/variable names, how the accepted code actually works. Vague explanations are exactly what §6 is designed to catch. Disclosure is grade-neutral: you're graded on accuracy and specificity, never on the fact that you used AI.
-
-**Commit history**: at least **12 commits** across at least **6 distinct calendar days**, no single day over 40% of total commits. Push to a remote (GitHub); we check push timestamps, not local dates. "Initial commit", "WIP", "update", "fix" don't count as meaningful messages; describe what changed and why. Fabricated or backdated history is an academic integrity violation.
-
-### 6. Written Comprehension Check (a multiplier, not a normal rubric line)
-In class, at or after the deadline, you'll answer 6 short-answer questions about your own project: on paper, closed-book, no notes/device/AI. Answers are graded against your actual repo, report, ADR log, and AI usage log.
-
-**How it affects your grade:** §3-§5 and §7-§9 are scored normally and summed to a subtotal out of 100. The check is scored separately, out of 100, and **multiplies** the subtotal (it isn't added). Example: subtotal 88/100, check 60% gives a final grade of 88 × 0.60 = **52.8/100**. A great subtotal can't buy out of a bad check, and a great check can't inflate a thin submission.
-
-Easy to ace if you know your project. If your ADR log, AI usage log, and commits reflect real work and understanding, this should be straightforward. You're graded on accuracy and specificity, not handwriting or prose.
-
-### 7. Local Container Contract
-The provided `container/Dockerfile` template defines an output contract: whatever you fill into its TODOs, the image it produces has to behave in a fixed way. That contract is what we run and what we grade. It is also what makes Assignment 2's split and Azure deployment possible later, so it's worth getting right now.
-
-Your app must:
-1. Run as a single process, started by one documented command (`python app.py`, `npm start`).
-2. Bind to `0.0.0.0`, not `localhost`/`127.0.0.1`. Binding to localhost makes the app unreachable from outside the container, which is the single most common failure here.
-3. Read its port from one environment variable (e.g. `PORT`), with a sane default.
-4. Need no interactive setup at startup (no `input()`, wizard, manual migration step). Run cleanly after clone + install + start, and create its own schema on first boot against an **empty** data directory.
-5. Write its SQLite file to one documented path, under a configurable directory (e.g. `DATA_DIR`), so the container can mount a volume there.
-6. Have no required external runtime dependency beyond a public API your use case genuinely needs. No external managed DB/cache/queue, no second container.
-7. Expose exactly one dependency manifest at the repo root.
-8. Not depend on a Dockerfile, `docker-compose.yml`, or CI workflow *of your own* to run. Your app must start the same way inside the provided container and on your laptop.
-9. Be configurable entirely via environment variables. No editing source to reconfigure, no hard dependency on a `.env` file existing.
-10. Start and be ready within a few seconds, no manual warm-up.
-11. **Ship seed data as code, not as a database file.** If your app needs reference data to be useful (a country list, a product catalogue, starter categories, a demo account), commit it as a readable text file (`seed.sql`, `seed.json`, `seed.csv`) and load it on first boot when the target table is empty. Do not commit a prebuilt `.db`/`.sqlite` file.
-
-**Why this rule exists.** The tempting shortcut is to build your database locally, commit `app.db`, and copy it into the image. That appears to work, which is exactly the problem. Docker copies an image's files into a named volume *only when that volume is empty*, so a baked-in `.db` shows up on a completely fresh volume and never again:
-
-| Situation | What happens to your baked-in `.db` |
+| Status | Meaning |
 |---|---|
-| First run, brand new empty volume | Copied in. Looks like it works. |
-| Every later run, once your app has written anything | Ignored. Rebuild the image with corrected seed data and nobody ever sees it. |
-| Bind mount (`-v ./data:/data`) | Never visible at all. The mount hides it completely. |
-| Assignment 2, mounted Azure file share | Same as a bind mount. Your app starts with an empty database. |
+| `pending_payment` | A place is reserved for 48 hours |
+| `confirmed` | Payment has been confirmed |
+| `waitlisted` | The trip is full, so the student joins the waiting list |
+| `cancelled` | The registration was cancelled or the payment deadline expired |
 
-So the failure is silent and arrives later, which is the worst kind. Three more reasons on top: a binary `.db` in Git gives unreadable diffs and unmergeable conflicts, it hides the schema decisions ADR-3 asks you to defend, and seeding from a text file is the same "database creation and migration" problem Assignment 2 grades directly. Do it now and Assignment 2 gets easier.
+When someone cancels or a payment deadline expires, the first student on the waiting list receives the available place and a new 48-hour payment window.
 
-Make the load **idempotent**: booting twice must not change your data. Guard on the target table being empty, or use `INSERT OR IGNORE` against a unique key. The checker starts your app twice on the same volume and compares row counts, so an unguarded seed shows up immediately as doubled rows.
+Expired reservations are processed whenever a registration, payment or cancellation is handled. This keeps the application within the single-process requirement without introducing background workers.
 
-The other way to get this wrong is to `DROP TABLE` and rebuild on every boot. Row counts stay constant, so the checker will not catch it, but it throws away everything your users entered every time the container restarts. We look for it when reading your code, and it is a fair target for a comprehension-check question. Your startup path should create what is missing and touch nothing that already exists.
+### Room allocation
 
-**Verification:** before you submit, run the provided checker against your repo:
+Once payment is confirmed, organisers can create rooms with one to six beds, assign students and record roommate preferences.
 
+The application checks that students are confirmed, rooms belong to the correct trip and no room exceeds its capacity. Cancelling a registration also releases the student's room assignment and removes any roommate preferences made by or naming that student.
+
+### Dashboard
+
+The **organiser** side gives an overview of each trip (available places, confirmed registrations, pending payments, waiting list) and a page per trip for registrations, payments, cancellations, rooms and roommate preferences.
+
+The **My trip** side lets a student look up their own registration with their registration number and email, see their status and room, and keep a personal packing list.
+
+## 2. Architecture
+
+The two domains from Assignment 1 now run as separate services. The UI is static files; the browser loads them from nginx and then calls each service directly.
+
+```text
+                        Browser
+            loads ui/ from nginx (port 8080)
+               |                       |
+     TRIPS_URL (config.js)     ROOMS_URL (config.js)
+               |                       |
+   Trip Management  <------  Room Allocation
+     (Flask, 8001)    HTTP     (Flask, 8002)
+          |          ------>          |
+       trips.db      release       rooms.db
+   trips, registrations       rooms, room_assignments,
+                              roommate_preferences
+
+   SQL Server + db-init (being introduced, see below)
 ```
-./container/run.sh /path/to/your/repo
+
+**Trip Management** owns `trips` and `registrations`: capacity, payments, cancellations and waiting-list order.
+
+**Room Allocation** owns `rooms`, `room_assignments` and `roommate_preferences`. It never reads Trip Management's tables. When it needs to know whether a trip or registration exists, `_trip_exists` and `_get_registration` call `GET /trips/<id>` and `GET /registrations/<id>` on `TRIPS_URL`.
+
+**Cancelling** a registration is the one call in the other direction: Trip Management calls Room Allocation's `POST /registrations/<id>/release` inside its own transaction. If Room Allocation is down, the cancel is rolled back and the organiser sees an error, so a cancelled student never keeps a bed.
+
+**UI** is plain HTML, CSS and JavaScript in `ui/`. It reads the services' addresses from `ui/config.js`: locally the compose ports, on Azure the deploy pipeline writes the real URLs into that file. Because the page and the services have different origins, each service sends CORS headers that allow only the UI's origin (`CORS_ORIGIN`).
+
+### Databases
+
+Each service still writes its own SQLite file (`trips.db`, `rooms.db`) to a Docker volume, so their data is already separate. The move to SQL Server has started:
+
+- Compose runs a `sqlserver` container and a one-shot `db-init` job. It runs `db/init.sql`, which creates a `trips` and a `rooms` database and one login per service (`trips_app`, `rooms_app`). Each login is a user in its own database only, so neither service can read the other's data. The script only creates what is missing, so it is safe on every start.
+- The tables are defined by each service's migrations: `services/trip-management/migrations/001_init.sql` and `services/room-allocation/migrations/001_init.sql`.
+
+The services will apply their own migrations at startup once they are switched over to SQL Server, which is the next step.
+
+Design choices and alternatives are explained in [ADR.md](ADR.md).
+
+## 3. Getting started
+
+### Run everything with Docker Compose
+
+Requirements: Docker with Compose.
+
+```bash
+git clone https://github.com/aliciaamueller/skitripplanner.git
+cd skitripplanner
+cp .env.example .env        # then set the three passwords in .env
+docker compose up --build
 ```
 
-It builds your image, starts it, and tests each point above, including the two that silently pass on a laptop and fail in a container: binding `0.0.0.0` rather than `127.0.0.1`, and actually reading `$PORT` instead of hardcoding 8000. Paste its output into your README as your §7 evidence. If you can't produce a passing run, your app doesn't meet §7 and Working Features is graded down.
+Open **http://localhost:8080**. Each service is also reachable directly: Trip Management on **http://localhost:8001**, Room Allocation on **http://localhost:8002**.
 
-### 8. Documentation
-A short report (4-5 pages):
-- SDLC model chosen and justification (SMART goals; how you did or didn't follow it in practice)
-- **Architecture overview diagram**, must match what you actually built. Mark where the seam between your two feature domains (§3) falls, i.e. where you'd cut if you had to split them into separate services.
-- **Database model/schema diagram** (tables, columns, relationships), must match ADR-3 and your actual schema
-- README with setup instructions clear enough for someone else to run the project, covering both ways to run it: directly on a machine, and with `docker build` + `docker run`. Include every environment variable you read with its default, the SQLite path, the coverage command from §4, and the passing `run.sh` output from §7.
-- The AI-disclosure statement required by the course syllabus: "I acknowledge the use of [AI system] to [how you used it]. The prompts used include [...]. The output of these prompts was used to [...]." This is a report-level summary; the detailed log lives in `AI_USAGE.md`.
+`.env` is ignored by Git, so the database passwords are never committed. Compose stops with a clear message if one is missing. Data lives in named volumes (`trips-data`, `rooms-data`, `sqlserver-data`) and survives `docker compose down`; `docker compose down -v` deletes it.
 
-### 9. Version Control
-- Individual Git repository.
-- Commit requirements per §5 (12+ commits, 6+ distinct days, pushed to a remote).
+### Run a service directly
 
-### Deliverables
-- Git repository with code, `ADR.md`, and `AI_USAGE.md` at the root
-- Report (4-5 pages) per §8, including the README and the §7 container-run evidence
-- Attendance at the written comprehension check (§6)
+Each service has its own `requirements.txt` and starts with `python app.py`. For example, both services side by side:
 
-The Dockerfile in your repo is the provided template with its TODOs filled in, nothing more. Not deliverables for Assignment 1: a Dockerfile you designed yourself, a `docker-compose.yml`, a CI pipeline, a cloud deployment, or a live URL. Those are Assignment 2.
+```bash
+cd services/trip-management
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+PORT=8001 ROOMS_URL=http://localhost:8002 python app.py
+```
 
-### Grading Criteria
-Each category below is scored normally and summed to a subtotal out of 100. The written comprehension check (§6) isn't one of these categories: it's scored separately, out of 100, and multiplies the subtotal (example in §6).
+```bash
+cd services/room-allocation
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+PORT=8002 TRIPS_URL=http://localhost:8001 python app.py
+```
 
-| Category | Weight | Breakdown |
-|---|---|---|
-| Working Features | 20% | Feature domain 1: 10% · Feature domain 2: 10% (both must use SQLite to count, and `container/run.sh` must pass per §7) |
-| Testing | 15% | ≥70% coverage on core logic (§4); sliding scale below threshold, 0 if tests absent |
-| Code Quality & Version Control | 20% | 10% code quality (justified tech choices per §1b, modularity between domains) · 10% commit cadence & hygiene (§5) |
-| Documentation & Report | 15% | 5% SDLC explanation · 5% diagrams (must match repo) · 5% README/setup |
-| Process Evidence | 30% | 15% `ADR.md` · 15% `AI_USAGE.md` |
-| **Subtotal** | **100%** | |
-| **× Written Comprehension Check (§6)** | **0-100%** | Multiplies the subtotal (worked example in §6) |
+Each service creates its tables on startup and keeps existing data. To use the UI with services started this way, serve the `ui/` folder on port 8080 (for example `python3 -m http.server 8080 -d ui`), so its origin matches the default `CORS_ORIGIN`.
 
-Process Evidence carries the largest share of the subtotal: it's the record of decisions made over time, not a snapshot at the deadline. Working features and code quality still matter (you need a genuinely working, well-built app), but AI makes "working" cheap and says little on its own about whether you understand what you shipped. None of this matters if you can't explain your project cold: the comprehension check sits outside the rubric, as a multiplier, because it's the one part that's closed-book, in person, and checked directly against your code.
+### Configuration
+
+| Service | Variable | Default | Description |
+|---|---|---|---|
+| Trip Management | `PORT` | `8000` | Port the service listens on |
+| Trip Management | `DATA_DIR` | `./data` (`/data` in the image) | Folder for `trips.db` |
+| Trip Management | `ROOMS_URL` | `http://room-allocation:8000` | Room Allocation, called when a registration is cancelled |
+| Room Allocation | `PORT` | `8000` | Port the service listens on |
+| Room Allocation | `DATA_DIR` | `./data` (`/data` in the image) | Folder for `rooms.db` |
+| Room Allocation | `TRIPS_URL` | `http://trip-management:8000` | Trip Management, asked about trips and registrations |
+| Both services | `CORS_ORIGIN` | `http://localhost:8080` | The only origin browsers may call the service from (the UI) |
+| Both services | `GIT_SHA` | `dev` | Version reported by `/health` |
+| UI | `ui/config.js` | `http://localhost:8001`, `http://localhost:8002` | `TRIPS_URL` and `ROOMS_URL` the browser calls; rewritten at deploy time |
+| sqlserver, db-init | `MSSQL_SA_PASSWORD` | none, set in `.env` | SQL Server administrator password |
+| db-init | `TRIPS_DB_PASSWORD` | none, set in `.env` | Password of the `trips_app` login |
+| db-init | `ROOMS_DB_PASSWORD` | none, set in `.env` | Password of the `rooms_app` login |
+
+**Database paths:** `$DATA_DIR/trips.db` and `$DATA_DIR/rooms.db`, which is `/data/...` inside each container, on that service's volume.
+
+Both services answer `GET /health` with HTTP 200, so the cloud can check that they are alive.
+
+## 4. Testing and reliability
+
+Each service has its own tests, using **pytest** and **pytest-cov**. They run against temporary SQLite files, so they never touch real data. Room Allocation's tests replace the HTTP calls to Trip Management with an in-memory fake, so they test room rules without a running service.
+
+Run one service's tests with coverage (from inside `services/trip-management` or `services/room-allocation`):
+
+```bash
+pip install -r requirements.txt pytest pytest-cov
+python -m pytest --cov=. --cov-report=term-missing
+```
+
+### Recorded test results (2026-11-21)
+
+**Trip Management: 47 tests. Room Allocation: 33 tests.** Business-logic coverage:
+
+```text
+Name                 Stmts   Miss  Cover
+----------------------------------------
+trip_management.py     150      0   100%
+trip_statistics.py      14      0   100%
+room_allocation.py     141      6    96%
+```
+
+Line coverage is not proof that every combination of rules is tested; the testing priorities are explained in ADR 4.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push. The `test` job runs ruff and pytest for each service. The `images` job only starts if the tests pass; it builds the two service images and, on `main` only, pushes them to GitHub Container Registry tagged with the commit SHA.
+
+### Preventing overbooking
+
+One test starts **10 simultaneous registrations for a trip with only 2 available places**. The expected result is two reserved places and eight waitlisted students. `register_student` opens a `BEGIN IMMEDIATE` transaction before checking capacity, so simultaneous requests cannot reserve the same last places. Time-dependent tests use `monkeypatch` to simulate payment deadlines without waiting 48 hours.
+
+### Assignment 1 container check
+
+The professor's `container/run.sh` checks the single-container app from Assignment 1. Its passing run (2026-10-12) applied to the monolith, which is still in the history up to commit `1f6412a`:
+
+```text
+=== SDD Assignment 1 contract check ===
+==> Repository shape                                PASS
+==> Build from a clean context, no build args       PASS  (image 53 MB)
+==> Start on PORT=8000 and reach it from the host   PASS
+==> SQLite file under DATA_DIR                      PASS  (ski_club.db)
+==> Data persists, and a second boot does not re-seed  PASS
+==> PORT override is honoured (not hardcoded)       PASS
+=== ALL CHECKS PASSED ===
+```
+
+## 5. Engineering decisions
+
+A few decisions were particularly important during development.
+
+**Keeping the implementation simple.** Flask and Python's built-in `sqlite3` module were sufficient for this project's scope, and the services call each other with the standard library's `urllib`, so the split added no new dependency. Using direct SQL also makes the database constraints and queries easier to follow.
+
+**Preserving registration history.** Cancelled registrations are retained instead of deleted. A partial unique index prevents duplicate active registrations while allowing students to register again after cancelling.
+
+**Handling simultaneous requests safely.** Database transactions protect capacity checks and registration updates, rather than assuming that registrations will always happen one at a time.
+
+**Keeping responsibilities separate.** Trip Management and Room Allocation each own their database and only reach the other through its HTTP endpoints. Room counts were taken out of the trip statistics because the two tables now live in different databases.
+
+**Patterns that support the split.** Three patterns from class are in the code because each one protects the boundary between the two domains. Each domain module works as a facade: the rest of the app changes a domain only by calling its public functions, such as `register_student` or `assign_student`, which later become that service's endpoints. Cancellation uses an observer: `app.py` registers `release_room` with `on_registration_cancelled`, so `trip_management.py` announces the cancellation and does not know that a Room Allocation service exists. Room Allocation reads Trip Management data only through two adapter functions, `_trip_exists` and `_get_registration`. In the split they were the only code that had to change: they now call Trip Management over HTTP instead of reading the shared database. `get_connection` in `db.py` also acts as a simple factory, so every connection is set up the same way.
+
+**Avoiding unnecessary infrastructure.** Payment expiry is still checked during relevant operations rather than by a background job, so each service stays a single process.
+
+These decisions, including alternatives and consequences, are documented in [ADR.md](ADR.md).
+
+## 6. Project structure
+
+```text
+skitripplanner/
+├── services/
+│   ├── trip-management/      Trip Management service
+│   │   ├── app.py            HTTP endpoints, calls Room Allocation on cancel
+│   │   ├── trip_management.py  trips, registrations, payments, waiting list
+│   │   ├── trip_statistics.py  numbers for the organiser overview
+│   │   ├── config.py, db.py, schema.sql
+│   │   ├── migrations/       SQL Server schema, one numbered file per change
+│   │   ├── tests/
+│   │   ├── requirements.txt, pytest.ini
+│   │   └── Dockerfile
+│   └── room-allocation/      Room Allocation service
+│       ├── app.py            HTTP endpoints
+│       ├── room_allocation.py  rooms, assignments, roommate preferences
+│       ├── config.py, db.py, schema.sql
+│       ├── migrations/
+│       ├── tests/
+│       ├── requirements.txt, pytest.ini
+│       └── Dockerfile
+├── ui/                       static UI: pages, config.js, styles, images
+├── db/
+│   └── init.sql              local databases and one login per service
+├── .github/workflows/ci.yml  tests, then image builds
+├── docker-compose.yml        the whole system locally
+├── .env.example              the variables .env must set
+├── container/                professor-provided Assignment 1 template and checker
+├── ADR.md
+├── AI_USAGE.md
+├── ASSIGNMENT_BRIEF.md
+└── README.md
+```
+
+## 7. Development and documentation
+
+The project was developed incrementally, with Git commits recording changes to the application, tests and documentation.
+
+The supporting documents provide more detail:
+
+- [ADR.md](ADR.md): architectural decisions, alternatives and consequences.
+- [AI_USAGE.md](AI_USAGE.md): use of ChatGPT and Claude Code, including prompts, accepted or modified suggestions, and explanations of the resulting code.
+- [ASSIGNMENT_BRIEF.md](ASSIGNMENT_BRIEF.md): the Assignment 1 requirements.
+
+The current implementation focuses on the two required domains. Editing existing trips and automatic roommate matching are possible future extensions, rather than dependencies of the existing workflow.
